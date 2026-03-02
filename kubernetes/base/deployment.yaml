@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portra
+  namespace: portra-system
+  labels:
+    app: portra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: portra
+  template:
+    metadata:
+      labels:
+        app: portra
+    spec:
+      containers:
+      - name: portra
+        image: portra/portra:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DATABASE_URL
+          value: "file:/data/portra.sqlite"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: portra-data-pvc
