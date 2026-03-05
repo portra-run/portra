@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { use, useEffect, useState } from "react"
 import type { AppCRD } from "@/backend/kubernetes"
 import { Badge } from "@/components/ui/badge"
@@ -22,12 +23,20 @@ export default function AppDetailsPage({
   params: Promise<{ name: string }>
 }) {
   const { name } = use(params)
+  const searchParams = useSearchParams()
+  const namespace = searchParams.get("namespace")
+
   const [app, setApp] = useState<AppCRD | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`/api/apps/${name}`)
+    const url = new URL(`/api/apps/${name}`, window.location.origin)
+    if (namespace) {
+      url.searchParams.set("namespace", namespace)
+    }
+
+    fetch(url.toString())
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch app details")
         return res.json()
@@ -40,15 +49,15 @@ export default function AppDetailsPage({
         setError(err.message)
         setLoading(false)
       })
-  }, [name])
+  }, [name, namespace])
 
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <Skeleton className="h-10 w-50" />
+        <Skeleton className="h-10 w-[200px]" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-50 md:col-span-2" />
-          <Skeleton className="h-50" />
+          <Skeleton className="h-[200px] md:col-span-2" />
+          <Skeleton className="h-[200px]" />
         </div>
       </div>
     )
@@ -69,22 +78,43 @@ export default function AppDetailsPage({
   const isAvailable =
     app.status?.conditions?.find((c) => c.type === "Available")?.status ===
     "True"
+  const isProgressing =
+    app.status?.conditions?.find((c) => c.type === "Progressing")?.status ===
+    "True"
+  const isDegraded =
+    app.status?.conditions?.find((c) => c.type === "Degraded")?.status ===
+    "True"
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">{app.metadata.name}</h1>
-          {isAvailable ? (
-            <Badge
-              variant="default"
-              className="bg-green-500 hover:bg-green-600"
-            >
-              Running
-            </Badge>
-          ) : (
-            <Badge variant="destructive">Degraded / Unknown</Badge>
-          )}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">{app.metadata.name}</h1>
+            {isAvailable ? (
+              <Badge
+                variant="default"
+                className="bg-green-500 hover:bg-green-600"
+              >
+                Running
+              </Badge>
+            ) : isProgressing ? (
+              <Badge
+                variant="secondary"
+                className="bg-blue-500 text-white hover:bg-blue-600"
+              >
+                Progressing
+              </Badge>
+            ) : isDegraded ? (
+              <Badge variant="destructive">Degraded</Badge>
+            ) : (
+              <Badge variant="secondary">Unknown</Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Namespace:</span>
+            <Badge variant="outline">{app.metadata.namespace}</Badge>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -200,7 +230,7 @@ export default function AppDetailsPage({
 
             <div className="pt-2">
               <p className="text-xs text-muted-foreground">
-                Last updated: {app.metadata.creationTimestamp?.toString()}
+                Last updated: {app.metadata.creationTimestamp}
               </p>
             </div>
           </CardContent>

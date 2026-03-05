@@ -11,6 +11,7 @@
     "database:generate-auth-schema": "bunx --bun better-auth generate --config=src/backend/auth.ts --output=src/backend/database/auth-schema.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@kubernetes/client-node": "^1.4.0",
     "better-auth": "^1.4.20",
     "class-variance-authority": "^0.7.1",
@@ -22,7 +23,9 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "tailwind-merge": "^3.5.0"
+    "react-hook-form": "^7.71.2",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.20",
@@ -44,7 +47,6 @@
   ],
   "trustedDependencies": [
     "@prisma/client",
-    "better-sqlite3",
     "esbuild",
     "msw",
     "sharp",

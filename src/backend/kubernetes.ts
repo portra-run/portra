@@ -9,6 +9,7 @@ export const customApi = kc.makeApiClient(k8s.CustomObjectsApi)
 export const APP_GROUP = "core.portra.run"
 export const APP_VERSION = "v1"
 export const APP_PLURAL = "apps"
+export const DEFAULT_NAMESPACE = "portra-system"
 
 export interface AppCRD {
   apiVersion: string

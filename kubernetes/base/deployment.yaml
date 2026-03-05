@@ -15,9 +15,10 @@ spec:
       labels:
         app: portra
     spec:
+      serviceAccountName: portra
       containers:
       - name: portra
-        image: portra/portra:latest
+        image: vadolasi/portra:latest
         ports:
         - containerPort: 3000
         env:

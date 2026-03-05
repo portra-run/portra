@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { AppCRD } from "@/backend/kubernetes"
+import { CreateAppDialog } from "@/components/create-app-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +22,8 @@ export default function AppsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchApps = useCallback(() => {
+    setLoading(true)
     fetch("/api/apps")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch apps")
@@ -37,13 +39,17 @@ export default function AppsPage() {
       })
   }, [])
 
-  if (loading) {
+  useEffect(() => {
+    fetchApps()
+  }, [fetchApps])
+
+  if (loading && apps.length === 0) {
     return (
       <div className="p-6 space-y-4">
         <h1 className="text-3xl font-bold">Applications</h1>
         <Card>
           <CardContent className="p-0">
-            <Skeleton className="h-100 w-full" />
+            <Skeleton className="h-[400px] w-full" />
           </CardContent>
         </Card>
       </div>
@@ -63,9 +69,7 @@ export default function AppsPage() {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Applications</h1>
-        <Button asChild>
-          <Link href="/apps/new">New App</Link>
-        </Button>
+        <CreateAppDialog onAppCreated={fetchApps} />
       </div>
 
       <Card>
@@ -77,9 +81,9 @@ export default function AppsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Namespace</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>Replicas</TableHead>
-                <TableHead>Domains</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -96,43 +100,69 @@ export default function AppsPage() {
                 </TableRow>
               ) : (
                 apps.map((app) => (
-                  <TableRow key={app.metadata.name}>
+                  <TableRow
+                    key={`${app.metadata.namespace}-${app.metadata.name}`}
+                  >
                     <TableCell className="font-medium">
                       <Link
-                        href={`/apps/${app.metadata.name}`}
+                        href={`/apps/${app.metadata.name}?namespace=${app.metadata.namespace}`}
                         className="hover:underline"
                       >
                         {app.metadata.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell>
+                      <Badge variant="outline">{app.metadata.namespace}</Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[200px] truncate">
                       {app.spec.image}
                     </TableCell>
                     <TableCell>{app.spec.replicas ?? 1}</TableCell>
                     <TableCell>
-                      {app.spec.domains?.map((d) => (
-                        <div key={d} className="text-xs">
-                          {d}
-                        </div>
-                      )) || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {app.status?.conditions?.find(
-                        (c) => c.type === "Available"
-                      )?.status === "True" ? (
-                        <Badge
-                          variant="default"
-                          className="bg-green-500 hover:bg-green-600"
-                        >
-                          Running
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Unknown</Badge>
-                      )}
+                      {(() => {
+                        const available = app.status?.conditions?.find(
+                          (c) => c.type === "Available"
+                        )
+                        const progressing = app.status?.conditions?.find(
+                          (c) => c.type === "Progressing"
+                        )
+                        const degraded = app.status?.conditions?.find(
+                          (c) => c.type === "Degraded"
+                        )
+
+                        if (available?.status === "True") {
+                          return (
+                            <Badge
+                              variant="default"
+                              className="bg-green-500 hover:bg-green-600"
+                            >
+                              Running
+                            </Badge>
+                          )
+                        }
+                        if (progressing?.status === "True") {
+                          return (
+                            <Badge
+                              variant="secondary"
+                              className="bg-blue-500 text-white hover:bg-blue-600"
+                            >
+                              Progressing
+                            </Badge>
+                          )
+                        }
+                        if (degraded?.status === "True") {
+                          return <Badge variant="destructive">Degraded</Badge>
+                        }
+                        return <Badge variant="secondary">Unknown</Badge>
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/apps/${app.metadata.name}`}>Details</Link>
+                        <Link
+                          href={`/apps/${app.metadata.name}?namespace=${app.metadata.namespace}`}
+                        >
+                          Details
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>
